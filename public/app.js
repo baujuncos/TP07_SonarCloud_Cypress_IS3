@@ -27,6 +27,13 @@ const filterStartDate = document.getElementById('filterStartDate');
 const filterEndDate = document.getElementById('filterEndDate');
 const filterSearch = document.getElementById('filterSearch');
 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+const statsSection = document.getElementById('statsSection');
+const statsSubtitle = document.getElementById('statsSubtitle');
+const statsCompletedValue = document.getElementById('statsCompleted');
+const statsPendingValue = document.getElementById('statsPending');
+const statsTotalValue = document.getElementById('statsTotal');
+const statsProgressText = document.getElementById('statsProgressText');
+const statsProgressBar = document.getElementById('statsProgressBar');
 
 // Check if user is logged in
 window.addEventListener('DOMContentLoaded', () => {
@@ -74,6 +81,7 @@ function showTasksPage() {
         syncFiltersFromForm();
     }
 
+    updateStatsSubtitle();
     loadTasks();
 }
 
@@ -166,6 +174,31 @@ async function loadTasks() {
         tasksList.innerHTML = '<p class="text-center">Cargando tareas...</p>';
     }
 
+    const params = buildFiltersQueryParams();
+    const queryString = params.toString();
+    const url = `${API_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+
+        if (response.ok) {
+            const tasks = await response.json();
+            displayTasks(tasks);
+            loadStats();
+        } else if (response.status === 401) {
+            // Token expired
+            logout();
+        } else {
+            tasksList.innerHTML = '<p class="text-center">Error al cargar tareas</p>';
+        }
+    } catch (error) {
+        tasksList.innerHTML = '<p class="text-center">Error de conexión</p>';
+    }
+}
+
+function buildFiltersQueryParams() {
     const params = new URLSearchParams();
 
     if (currentFilters.status && currentFilters.status !== 'all') {
@@ -184,8 +217,23 @@ async function loadTasks() {
         params.set('search', currentFilters.search);
     }
 
+    return params;
+}
+
+async function loadStats() {
+    if (!statsSection || !currentToken) {
+        return;
+    }
+
+    setStatsLoading();
+
+    const params = buildFiltersQueryParams();
+    if (isViewingAllTasks && currentUser?.role === 'admin') {
+        params.set('view', 'all');
+    }
+
     const queryString = params.toString();
-    const url = `${API_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_URL}/tasks/stats${queryString ? `?${queryString}` : ''}`;
 
     try {
         const response = await fetch(url, {
@@ -193,17 +241,66 @@ async function loadTasks() {
         });
 
         if (response.ok) {
-            const tasks = await response.json();
-            displayTasks(tasks);
+            const stats = await response.json();
+            updateStatsValues(stats);
         } else if (response.status === 401) {
-            // Token expired
             logout();
         } else {
-            tasksList.innerHTML = '<p class="text-center">Error al cargar tareas</p>';
+            setStatsError();
         }
     } catch (error) {
-        tasksList.innerHTML = '<p class="text-center">Error de conexión</p>';
+        setStatsError();
     }
+}
+
+function setStatsLoading() {
+    if (!statsCompletedValue) {
+        return;
+    }
+
+    statsCompletedValue.textContent = '...';
+    statsPendingValue.textContent = '...';
+    statsTotalValue.textContent = '...';
+    statsProgressText.textContent = '...';
+    statsProgressBar.style.width = '0%';
+}
+
+function setStatsError() {
+    if (!statsCompletedValue) {
+        return;
+    }
+
+    statsCompletedValue.textContent = '—';
+    statsPendingValue.textContent = '—';
+    statsTotalValue.textContent = '—';
+    statsProgressText.textContent = '—';
+    statsProgressBar.style.width = '0%';
+}
+
+function updateStatsValues(stats = {}) {
+    if (!statsCompletedValue) {
+        return;
+    }
+
+    const completed = Number(stats.completed) || 0;
+    const pending = Number(stats.pending) || 0;
+    const total = Number(stats.total) || 0;
+    const progress = Number(stats.progress) || 0;
+
+    statsCompletedValue.textContent = completed;
+    statsPendingValue.textContent = pending;
+    statsTotalValue.textContent = total;
+    statsProgressText.textContent = `${progress}%`;
+    statsProgressBar.style.width = `${progress}%`;
+}
+
+function updateStatsSubtitle() {
+    if (!statsSubtitle) {
+        return;
+    }
+
+    const viewingAll = isViewingAllTasks && currentUser?.role === 'admin';
+    statsSubtitle.textContent = viewingAll ? 'Resumen de todas las tareas' : 'Resumen de tus tareas';
 }
 
 // Display tasks
@@ -276,6 +373,7 @@ toggleViewBtn.addEventListener('click', () => {
     isViewingAllTasks = !isViewingAllTasks;
     toggleViewBtn.textContent = isViewingAllTasks ? 'Ver Mis Tareas' : 'Ver Todas las Tareas';
     tasksTitle.textContent = isViewingAllTasks ? 'Todas las Tareas' : 'Mis Tareas';
+    updateStatsSubtitle();
     loadTasks();
 });
 

@@ -29,6 +29,15 @@ const buildFilterClauses = (filters = {}, tableAlias = 'tasks') => {
   return { clauses, params };
 };
 
+const mapStatsRow = (row = {}) => {
+  const total = row.total || 0;
+  const completed = row.completed || 0;
+  const pending = total - completed;
+  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  return { total, completed, pending, progress };
+};
+
 const Task = {
   create: (title, description, dueDate, userId) => {
     return new Promise((resolve, reject) => {
@@ -84,6 +93,52 @@ const Task = {
           reject(err);
         } else {
           resolve(rows || []);
+        }
+      });
+    });
+  },
+
+  getStatsByUserId: (userId, filters = {}) => {
+    return new Promise((resolve, reject) => {
+      const { clauses, params } = buildFilterClauses(filters);
+      const conditions = [`user_id = ?`, ...clauses];
+      const query = `
+        SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed
+        FROM tasks
+        WHERE ${conditions.join(' AND ')}
+      `;
+
+      db.get(query, [userId, ...params], (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(mapStatsRow(row));
+        }
+      });
+    });
+  },
+
+  getStatsForAll: (filters = {}) => {
+    return new Promise((resolve, reject) => {
+      const { clauses, params } = buildFilterClauses(filters);
+      let query = `
+        SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed
+        FROM tasks
+      `;
+
+      if (clauses.length > 0) {
+        query += ' WHERE ' + clauses.join(' AND ');
+      }
+
+      db.get(query, params, (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(mapStatsRow(row));
         }
       });
     });

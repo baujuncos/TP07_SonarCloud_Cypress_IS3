@@ -59,6 +59,23 @@ router.get('/all', adminMiddleware, async (req, res) => {
   }
 });
 
+// Get task stats
+router.get('/stats', async (req, res) => {
+  try {
+    const filters = parseFilters(req.query);
+    const view = String(req.query.view || '').toLowerCase();
+
+    const stats = req.user.role === 'admin' && view === 'all'
+      ? await Task.getStatsForAll(filters)
+      : await Task.getStatsByUserId(req.user.id, filters);
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({ message: 'Error fetching task stats' });
+  }
+});
+
 // Create task
 router.post('/', async (req, res) => {
   try {
