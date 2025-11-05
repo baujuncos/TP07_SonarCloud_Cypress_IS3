@@ -1,5 +1,34 @@
 const { db } = require('../config/database');
 
+const buildFilterClauses = (filters = {}, tableAlias = 'tasks') => {
+  const clauses = [];
+  const params = [];
+
+  if (filters.status === 'hecha') {
+    clauses.push(`${tableAlias}.completed = 1`);
+  } else if (filters.status === 'no_hecha') {
+    clauses.push(`${tableAlias}.completed = 0`);
+  }
+
+  if (filters.startDate) {
+    clauses.push(`DATE(${tableAlias}.due_date) >= DATE(?)`);
+    params.push(filters.startDate);
+  }
+
+  if (filters.endDate) {
+    clauses.push(`DATE(${tableAlias}.due_date) <= DATE(?)`);
+    params.push(filters.endDate);
+  }
+
+  if (filters.search) {
+    const likeQuery = `%${filters.search.toLowerCase()}%`;
+    clauses.push(`(LOWER(${tableAlias}.title) LIKE ? OR LOWER(COALESCE(${tableAlias}.description, '')) LIKE ?)`);
+    params.push(likeQuery, likeQuery);
+  }
+
+  return { clauses, params };
+};
+
 const Task = {
   create: (title, description, dueDate, userId) => {
     return new Promise((resolve, reject) => {
@@ -14,10 +43,18 @@ const Task = {
     });
   },
 
-  findByUserId: (userId) => {
+  findByUserId: (userId, filters = {}) => {
     return new Promise((resolve, reject) => {
-      const query = 'SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC';
-      db.all(query, [userId], (err, rows) => {
+      const { clauses, params } = buildFilterClauses(filters);
+      let query = 'SELECT * FROM tasks WHERE user_id = ?';
+
+      if (clauses.length > 0) {
+        query += ' AND ' + clauses.join(' AND ');
+      }
+
+      query += ' ORDER BY created_at DESC';
+
+      db.all(query, [userId, ...params], (err, rows) => {
         if (err) {
           reject(err);
         } else {
@@ -27,15 +64,22 @@ const Task = {
     });
   },
 
-  findAll: () => {
+  findAll: (filters = {}) => {
     return new Promise((resolve, reject) => {
-      const query = `
-        SELECT tasks.*, users.username 
-        FROM tasks 
-        JOIN users ON tasks.user_id = users.id 
-        ORDER BY tasks.created_at DESC
+      const { clauses, params } = buildFilterClauses(filters);
+      let query = `
+        SELECT tasks.*, users.username
+        FROM tasks
+        JOIN users ON tasks.user_id = users.id
       `;
-      db.all(query, [], (err, rows) => {
+
+      if (clauses.length > 0) {
+        query += ' WHERE ' + clauses.join(' AND ');
+      }
+
+      query += ' ORDER BY tasks.created_at DESC';
+
+      db.all(query, params, (err, rows) => {
         if (err) {
           reject(err);
         } else {

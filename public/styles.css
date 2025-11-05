@@ -127,6 +127,15 @@ body {
     background: #218838;
 }
 
+.btn-light {
+    background: #f1f3f5;
+    color: #495057;
+}
+
+.btn-light:hover {
+    background: #e2e6ea;
+}
+
 .text-center {
     text-align: center;
     margin-top: 20px;
@@ -210,6 +219,38 @@ body {
 }
 
 .tasks-header div {
+    display: flex;
+    gap: 10px;
+}
+
+.filters {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    align-items: end;
+}
+
+.filters-title {
+    margin: 30px 0 10px;
+    font-size: 1.4rem;
+    color: #2c3e50;
+}
+
+.filters .form-group {
+    margin-bottom: 0;
+}
+
+.filters .form-group select,
+.filters .form-group input {
+    width: 100%;
+}
+
+.filter-actions {
     display: flex;
     gap: 10px;
 }
@@ -359,6 +400,14 @@ body {
 
     .tasks-header div {
         width: 100%;
+        flex-direction: column;
+    }
+
+    .filters {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-actions {
         flex-direction: column;
     }
 
