@@ -1,0 +1,108 @@
+# Azure DevOps Pipeline for TikTask2.0
+
+trigger:
+  - main
+  - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetVersion: '9.0.x'
+
+stages:
+  - stage: Build
+    displayName: 'Build Stage'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build TikTask2.0'
+        steps:
+          - task: UseDotNet@2
+            displayName: 'Use .NET $(dotnetVersion)'
+            inputs:
+              version: '$(dotnetVersion)'
+              includePreviewVersions: false
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Restore NuGet Packages'
+            inputs:
+              command: 'restore'
+              projects: '**/*.csproj'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Build API Project'
+            inputs:
+              command: 'build'
+              projects: 'src/TikTask2.0.API/TikTask2.0.API.csproj'
+              arguments: '--configuration $(buildConfiguration) --no-restore'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Build Web Project'
+            inputs:
+              command: 'build'
+              projects: 'src/TikTask2.0.Web/TikTask2.0.Web.csproj'
+              arguments: '--configuration $(buildConfiguration) --no-restore'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Publish API'
+            inputs:
+              command: 'publish'
+              publishWebProjects: false
+              projects: 'src/TikTask2.0.API/TikTask2.0.API.csproj'
+              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/api'
+              zipAfterPublish: true
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Publish Web'
+            inputs:
+              command: 'publish'
+              publishWebProjects: false
+              projects: 'src/TikTask2.0.Web/TikTask2.0.Web.csproj'
+              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/web'
+              zipAfterPublish: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifacts'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+  - stage: Deploy
+    displayName: 'Deploy Stage'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployToAzure
+        displayName: 'Deploy to Azure'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  displayName: 'Download Artifacts'
+                  inputs:
+                    buildType: 'current'
+                    downloadType: 'single'
+                    artifactName: 'drop'
+                    downloadPath: '$(System.ArtifactsDirectory)'
+
+                - task: AzureWebApp@1
+                  displayName: 'Deploy API to Azure App Service'
+                  inputs:
+                    azureSubscription: '$(AzureSubscription)'
+                    appType: 'webApp'
+                    appName: '$(ApiAppName)'
+                    package: '$(System.ArtifactsDirectory)/drop/api/*.zip'
+                    deploymentMethod: 'auto'
+
+                - task: AzureWebApp@1
+                  displayName: 'Deploy Web to Azure App Service'
+                  inputs:
+                    azureSubscription: '$(AzureSubscription)'
+                    appType: 'webApp'
+                    appName: '$(WebAppName)'
+                    package: '$(System.ArtifactsDirectory)/drop/web/*.zip'
+                    deploymentMethod: 'auto'
