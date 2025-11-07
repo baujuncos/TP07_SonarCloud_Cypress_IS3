@@ -1,4 +1,5 @@
 # TikTask
+**Integrantes**: Belén Treachi y Bautista Juncos
 
 TikTask es una aplicación web moderna de gestión de tareas construida con Node.js, Express y SQLite.
 
