@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="Mocha Tests" time="5.853" tests="1" failures="0">
-  <testsuite name="Root Suite" timestamp="2025-11-09T19:34:03" tests="0" file="cypress\e2e\EliminacionUser.cy.js" time="0.000" failures="0">
-  </testsuite>
-  <testsuite name="Prueba de Eliminación  de Usuario" timestamp="2025-11-09T19:34:03" tests="1" time="5.850" failures="0">
-    <testcase name="Prueba de Eliminación  de Usuario La eliminación es exitosa" time="2.918" classname="La eliminación es exitosa">
-    </testcase>
-  </testsuite>
-</testsuites>
