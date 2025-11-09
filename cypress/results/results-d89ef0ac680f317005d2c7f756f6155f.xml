@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="7.718" tests="1" failures="0">
+  <testsuite name="Root Suite" timestamp="2025-11-09T19:34:21" tests="0" file="cypress\e2e\UserRegistroYCrearTask.cy.js" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="Prueba de registro de usuario y creación de Task" timestamp="2025-11-09T19:34:21" tests="1" time="7.715" failures="0">
+    <testcase name="Prueba de registro de usuario y creación de Task Task creada con éxito con usuario único" time="4.994" classname="Task creada con éxito con usuario único">
+    </testcase>
+  </testsuite>
+</testsuites>
