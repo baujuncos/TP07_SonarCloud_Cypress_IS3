@@ -152,6 +152,9 @@ Queda así:
 
 - El QualityGate de SonarCloud fue Passed.
 
+
+![alt text](image-51.png)
+
 ![alt text](image-33.png)
 
 ![alt text](image-32.png)
@@ -262,3 +265,212 @@ También es posible ejecutar Cypress en modo "headless" (sin interfaz gráfica) 
 
 ![alt text](image-50.png)
 
+### Nuestras pruebas de integración en Cypress:
+
+1. **Una simple para ver si nos carga la página:**
+
+        `   describe('Mi primera prueba', () => {
+            it('Carga correctamente la página de ejemplo', () => {
+            cy.visit('https://webapp-tp05-qa-juncos-treachi-fqa5gug9addretfg.canadacentral-01.azurewebsites.net') // Colocar la url local o de Azure de nuestro front
+            cy.get('h1').should('contain', 'TikTask') // Verifica que el título contenga "TikTask"
+            })
+        })`
+
+**Resultado:**
+
+![alt text](image-52.png)
+
+2. **Login:**
+
+        `   describe('Prueba de Login', () => {
+            it('El login es exitoso', () => {
+                cy.visit('https://webapp-tp05-qa-juncos-treachi-fqa5gug9addretfg.canadacentral-01.azurewebsites.net') // Colocar la url local o de Azure de nuestro front
+                cy.get('h1').should('contain', 'TikTask') // Verifica que el título contenga "TikTask"
+                cy.get('#loginUsername').click();
+                cy.get('#loginUsername').type('admin');
+                cy.get('#loginPassword').type('Admin123!');
+                cy.get('#loginForm button.btn').click();
+            })
+        })`
+
+
+**Resultado:**
+
+![alt text](image-53.png)
+
+
+3. **Registro de nuevo usuario y creación de Task con Descripción y Due date:**
+
+        `    import { faker } from '@faker-js/faker';
+
+            describe('Prueba de registro de usuario y creación de Task', () => {
+            it('Task creada con éxito con usuario único', () => {
+                // 1. Generar datos únicos (nuevo formato faker)
+                const uniqueUsername = faker.internet.username();  // username random
+                const uniqueEmail = faker.internet.email();        // email random
+                
+                cy.visit('https://webapp-tp05-qa-juncos-treachi-fqa5gug9addretfg.canadacentral-01.azurewebsites.net');
+                
+                cy.get('h1').should('contain', 'TikTask');
+                cy.get('#showRegister').click();
+                
+                cy.get('#registerUsername').type(uniqueUsername);
+                cy.get('#registerEmail').type(uniqueEmail);
+                cy.get('#registerPassword').type('proyecto');
+                cy.get('#registerForm button.btn').click();
+                
+                cy.get('#addTaskBtn').click();
+                cy.get('[name="title"]').type('Estudiar para el final de economia');
+                cy.get('[name="description"]').type('Es oral teorico');
+                
+                cy.get('[name="due_date"]').click();
+                cy.get('[name="due_date"]').clear();
+                cy.get('[name="due_date"]').type('2025-12-25');
+                
+                cy.get('#taskForm button.btn-primary').click();
+            });
+        });`
+
+
+**Resultado:**
+
+![alt text](image-54.png)
+
+![alt text](image-55.png)
+
+![alt text](image-56.png)
+
+4. **Eliminación de Usuario desde la cuenta admin:**
+
+        `    describe('Prueba de Login', () => {
+            it('El login es exitoso', () => {
+                cy.visit('https://webapp-tp05-qa-juncos-treachi-fqa5gug9addretfg.canadacentral-01.azurewebsites.net') // Colocar la url local o de Azure de nuestro front
+                cy.get('h1').should('contain', 'TikTask') // Verifica que el título contenga "TikTask"
+                cy.get('#loginUsername').click();
+                cy.get('#loginUsername').type('admin');
+                cy.get('#loginPassword').type('Admin123!');
+                cy.get('#loginForm button.btn').click();
+                cy.get('#manageUsersBtn').click();
+                cy.get('#adminUsersList div:nth-child(1) > div.user-card-actions > button.btn-danger').click();
+            })
+        })`
+
+
+**Resultado:**
+
+![alt text](image-57.png)
+
+
+### **Cypress corrido en headless:**
+
+![alt text](image-58.png)
+
+![alt text](image-59.png)
+
+![alt text](image-60.png)
+
+![alt text](image-61.png)
+
+**Resumen:**
+
+![alt text](image-62.png)
+
+### **Integramos Cypress al pipeline pero no sin algunos problemas:**
+
+**Ver en el pipeline la implementación**
+
+![alt text](image-63.png)
+
+![alt text](image-64.png)
+
+Detecta Fails en los tests de Cypress aunque hayan pasado correctamente los cuatro, entonces modificamos el codigo en el pipeline para sobrevivir falsos fallos y nos queda así:
+
+          # 8-quinquies. PUBLISH CYPRESS TEST RESULTS
+          - task: PublishTestResults@2
+            displayName: 'Publish Cypress E2E Test Results'
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'cypress/results/*.xml'
+              searchFolder: '$(System.DefaultWorkingDirectory)'
+              mergeTestResults: true
+              failTaskOnFailedTests: false     # evita que marque error por falsos negativos
+              testRunTitle: 'Cypress E2E Tests - $(Build.BuildNumber)'
+              publishRunAttachments: true
+
+
+### **Ejecución exitosa de tests de integración de Cypress en Pipeline:**
+
+* Instalamos dependencias:
+
+![alt text](image-65.png)
+
+* Arrancamos la app:
+
+![alt text](image-66.png)
+
+* Corremos en headless:
+
+![alt text](image-67.png)
+
+![alt text](image-68.png)
+
+![alt text](image-69.png)
+
+![alt text](image-70.png)
+
+![alt text](image-71.png)
+
+* Resumen de tests corridos:
+
+![alt text](image-72.png)
+
+* Publicamos los resultados de Cypress:
+
+![alt text](image-73.png)
+
+## Agregamos  un check del Quality Gate del Sonar EN NUESTRO PIPELINE que en nuestro caso es el predeterminado de Sonar:
+
+**Esto lo que hace es chequear que pase el quality gate y si no lo pasa detiene el pipeline:**
+
+Notar publish y luego el chequeo mencionado:
+
+![alt text](image-76.png)
+
+Para lograr que funcione debemos hacer uso de nuestro SonarToken que creamos casi al principio de este TP. Lo que hacemos es configurar una variable secreta de pipeline que utilice en todos los pipelines a partir de su creación:
+
+![alt text](image-77.png)
+
+## Ejecución exitosa de pipeline final:
+
+![alt text](image-75.png)
+
+## ¿Cómo bloqueamos deploy si  las pruebas de integración (Cypress) fallan?
+
+Esa línea hace que si cualquier test unitario o de Cypress falla,
+el stage completo (Build_Test_Analyze) marca Failed →
+y como nuestro deploy depende de succeeded(), no se ejecuta el stage DeployQA.
+
+![alt text](image-78.png)
+
+![alt text](image-79.png)
+
+## ¿Cómo bloqueamos deploy si SonarCloud detecta issues críticos?
+
+Está cubierto con nuestro Quality Gate API check. Ese paso revisa el estado general del Quality Gate, y el Quality Gate de SonarCloud incluye por defecto:
+
+* No tener issues críticos o bloqueantes.
+
+* No tener bugs severos o vulnerabilidades.
+
+* Mantener cobertura mínima y duplicaciones bajas.
+
+## ¿Cómo bloqueamos deploy si la cobertura es menor al 70%?
+
+Hacemos un control en el mismo pipeline luego de la publicación del Code Coverage Report:
+
+![alt text](image-80.png)
+
+**Funciona con éxito:**
+
+![alt text](image-81.png)
